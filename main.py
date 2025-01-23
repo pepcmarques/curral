@@ -37,13 +37,70 @@ class CurralGame:
         return self.flatten_board(self.board)
 
     def is_game_over(self):
-        # Check for game over condition (e.g., no valid moves left)
-        return self.game_over
+        """
+        Check if the game is over:
+        - The game is over if a player cannot make any valid moves.
+        - The game is also over if a player has no pieces left or the opponent has no pieces left.
+        """
+        # Check if the current player has any pieces on the board
+        player_pieces = np.count_nonzero(self.board == self.current_player)
+        opponent_pieces = np.count_nonzero(self.board == (3 - self.current_player))  # Opponent is 1 if current player is 2, and vice versa
+
+        # Game is over if the current player has no pieces left
+        if player_pieces == 0:
+            self.game_over = True
+            return True
+
+        # Game is over if the opponent has no pieces left (current player wins)
+        if opponent_pieces == 0:
+            self.game_over = True
+            return True
+
+        # Check if the current player has any valid moves
+        if len(self.valid_moves()) == 0:
+            self.game_over = True
+            return True
+
+        # Game is not over
+        self.game_over = False
+        return False
 
     def get_reward(self):
-        # Reward logic: +1 for capturing a piece, -1 for losing a piece, etc.
-        return 0  # Placeholder logic, refine it as needed
+        """Calculate the reward based on the game mechanics."""
+        reward = 0
+        # Reward or penalty based on game state
+        opponent = 2 if self.current_player == 1 else 1
+        
+        # 1. Check for piece captures
+        for x in range(self.board.shape[0]):
+            for y in range(self.board.shape[1]):
+                if self.board[x, y] == self.current_player:
+                    # Check if the current player captured an opponent's piece
+                    if (x > 0 and self.board[x-1, y] == opponent) or \
+                       (x < self.board.shape[0] - 1 and self.board[x+1, y] == opponent) or \
+                       (y > 0 and self.board[x, y-1] == opponent) or \
+                       (y < self.board.shape[1] - 1 and self.board[x, y+1] == opponent):
+                        reward += 1  # Reward for capturing a piece
 
+        # 2. Penalize if the agent loses a piece
+        for x in range(self.board.shape[0]):
+            for y in range(self.board.shape[1]):
+                if self.board[x, y] == opponent:
+                    # Check if the opponent captured the current player's piece
+                    if (x > 0 and self.board[x-1, y] == self.current_player) or \
+                       (x < self.board.shape[0] - 1 and self.board[x+1, y] == self.current_player) or \
+                       (y > 0 and self.board[x, y-1] == self.current_player) or \
+                       (y < self.board.shape[1] - 1 and self.board[x, y+1] == self.current_player):
+                        reward -= 1  # Penalty for losing a piece
+
+        # 3. Reward for winning and penalize for losing
+        if self.is_game_over():
+            if self.current_player == 1:  # Assume player 1 wins (can refine this logic)
+                reward += 10  # Large reward for winning
+            else:
+                reward -= 10  # Large penalty for losing
+
+        return reward
 
 def valid_moves(board, player):
     moves = []
